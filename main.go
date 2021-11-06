@@ -68,11 +68,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(http.StatusOK)
 	} else if r.Method == "GET" {
-		var count int
+		var count int64
 		row := s.db.QueryRow(context.Background(), "SELECT COUNT(distinct client_id) FROM entries")
-		row.Scan(count)
-		w.Write([]byte(fmt.Sprintf("%d", count)))
+		row.Scan(&count)
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(fmt.Sprintf("%d", count)))
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
 	}
