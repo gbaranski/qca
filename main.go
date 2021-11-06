@@ -92,6 +92,6 @@ func main() {
 		db,
 	}
 
-	http.Handle("/add", s)
+	http.Handle("/", s)
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
