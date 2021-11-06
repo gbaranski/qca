@@ -1,0 +1,25 @@
+version: "3"
+services:
+  postgres:
+    image: postgres
+    restart: "unless-stopped"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=some-password
+      - POSTGRES_DB=qca
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    tty: true
+    restart: "unless-stopped"
+    depends_on:
+      - postgres
+    build:
+      dockerfile: Dockerfile
+      context: .
+    ports:
+      - 8080:80
