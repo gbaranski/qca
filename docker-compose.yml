@@ -4,7 +4,7 @@ services:
     image: postgres
     restart: "unless-stopped"
     environment:
-      - POSTGRES_USER=postgres
+      - POSTGRES_USER=root
       - POSTGRES_PASSWORD=some-password
       - POSTGRES_DB=qca
     healthcheck:

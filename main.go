@@ -55,17 +55,31 @@ func GetClientID(w http.ResponseWriter, r *http.Request) (userIdentifier uuid.UU
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	clientID := GetClientID(w, r)
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		panic(err)
+	if r.Method == "POST" {
+		clientID := GetClientID(w, r)
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("new request from %s host = %s", clientID, host)
+		_, err = s.db.Exec(context.Background(), "INSERT INTO entries (client_id, time, host) VALUES ($1, $2, $3)", clientID, time.Now(), host)
+		if err != nil {
+			panic(err)
+		}
+		w.WriteHeader(http.StatusOK)
+	} else if r.Method == "GET" {
+		var count int
+		row := s.db.QueryRow(context.Background(), "SELECT COUNT(distinct client_id) FROM entries")
+		row.Scan(count)
+		w.Write([]byte(fmt.Sprintf("%d", count)))
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
 	}
-	log.Printf("new request from %s host = %s", clientID, host)
-	s.db.Exec(context.Background(), "INSERT INTO entries (client_id, time, host) VALUES ($1, $2, $3)", clientID, time.Now(), host)
 }
 
 func main() {
-	dsn := "host=postgres user=postgres password=some-password dbname=qca port=5432"
+	dsn := "host=postgres user=root password=some-password dbname=qca port=5432"
 	db, err := pgxpool.Connect(context.Background(), dsn)
 	if err != nil {
 		panic("failed to connect database")
@@ -78,6 +92,6 @@ func main() {
 		db,
 	}
 
-	http.Handle("/", s)
+	http.Handle("/add", s)
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
