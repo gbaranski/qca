@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
@@ -20,9 +21,9 @@ type Server struct {
 }
 
 type Entry struct {
-	ClientId      uuid.UUID `json:"clientId"`
-	Time          time.Time `json:"time"`
-	RemoteAddress string
+	ClientID uuid.UUID
+	Time     time.Time
+	Host     string
 }
 
 func SetNewClientID(w http.ResponseWriter, r *http.Request) uuid.UUID {
@@ -55,8 +56,12 @@ func GetClientID(w http.ResponseWriter, r *http.Request) (userIdentifier uuid.UU
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	clientID := GetClientID(w, r)
-	log.Printf("new request from %s", clientID)
-	s.db.Exec(context.Background(), "INSERT INTO entries (client_id, time, remote_address) VALUES ($1, $2, $3)", clientID, time.Now(), r.RemoteAddr)
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("new request from %s host = %s", clientID, host)
+	s.db.Exec(context.Background(), "INSERT INTO entries (client_id, time, host) VALUES ($1, $2, $3)", clientID, time.Now(), host)
 }
 
 func main() {
@@ -67,7 +72,7 @@ func main() {
 	}
 	defer db.Close()
 
-	db.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS entries (client_id uuid, time timestamp, remote_address text)")
+	db.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS entries (client_id uuid, time timestamp, host text)")
 
 	s := &Server{
 		db,
