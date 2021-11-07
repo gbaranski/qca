@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -27,6 +28,10 @@ type Entry struct {
 	Host     string
 }
 
+type Request struct {
+	ClientID uuid.UUID `json:"clientID"`
+}
+
 func GetHost(r *http.Request) (host string) {
 	host = r.Header.Get("CF-Connecting-IP")
 	if host == "" {
@@ -47,33 +52,17 @@ func SetNewClientID(w http.ResponseWriter, r *http.Request) uuid.UUID {
 	return userIdentifier
 }
 
-func GetClientID(w http.ResponseWriter, r *http.Request) (userIdentifier uuid.UUID) {
-	cookies := r.Cookies()
-	for _, c := range cookies {
-		if c.Name == cookieName {
-			var err error
-			userIdentifier, err = uuid.Parse(c.Value)
-			if err != nil {
-				log.Printf("received invalid err=%s", err)
-				userIdentifier = SetNewClientID(w, r)
-			} else {
-				return userIdentifier
-			}
-		}
-	}
-
-	if userIdentifier == uuid.Nil {
-		userIdentifier = SetNewClientID(w, r)
-	}
-	return
-}
-
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		clientID := GetClientID(w, r)
+		var request Request
+		err := json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			log.Printf("fail to parse error %s", err)
+			return
+		}
 		host := GetHost(r)
-		log.Printf("new request from %s host = %s", clientID, host)
-		_, err := s.db.Exec(context.Background(), "INSERT INTO entries (client_id, time, host) VALUES ($1, $2, $3)", clientID, time.Now(), host)
+		log.Printf("new request from %s host = %s", request.ClientID, host)
+		_, err = s.db.Exec(context.Background(), "INSERT INTO entries (client_id, time, host) VALUES ($1, $2, $3)", request.ClientID, time.Now(), host)
 		if err != nil {
 			panic(err)
 		}
@@ -106,8 +95,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", s)
 	handler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"quizizz.com"},
-		AllowCredentials: true,
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: false,
 		AllowedHeaders:   []string{"*"},
 	}).Handler(mux)
 	log.Fatal(http.ListenAndServe(":80", handler))
