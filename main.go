@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/rs/cors"
 )
 
 const (
@@ -102,6 +103,12 @@ func main() {
 		db,
 	}
 
-	http.Handle("/", s)
-	log.Fatal(http.ListenAndServe(":80", nil))
+	mux := http.NewServeMux()
+	mux.Handle("/", s)
+	handler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"quizizz.com"},
+		AllowCredentials: false,
+		AllowedHeaders:   []string{},
+	}).Handler(mux)
+	log.Fatal(http.ListenAndServe(":80", handler))
 }
