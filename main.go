@@ -106,7 +106,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", s)
 	handler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{"quizizz.com"},
 		AllowCredentials: true,
 		AllowedHeaders:   []string{"*"},
 	}).Handler(mux)
