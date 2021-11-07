@@ -26,6 +26,19 @@ type Entry struct {
 	Host     string
 }
 
+func GetHost(r *http.Request) (host string) {
+	host = r.Header.Get("X-Forwarded-Host")
+	if host == "" {
+		var err error
+		host, _, err = net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return
+}
+
 func SetNewClientID(w http.ResponseWriter, r *http.Request) uuid.UUID {
 	userIdentifier := uuid.New()
 	log.Printf("generated new client id = %s", userIdentifier.String())
@@ -57,12 +70,9 @@ func GetClientID(w http.ResponseWriter, r *http.Request) (userIdentifier uuid.UU
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		clientID := GetClientID(w, r)
-		host, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			panic(err)
-		}
+		host := GetHost(r)
 		log.Printf("new request from %s host = %s", clientID, host)
-		_, err = s.db.Exec(context.Background(), "INSERT INTO entries (client_id, time, host) VALUES ($1, $2, $3)", clientID, time.Now(), host)
+		_, err := s.db.Exec(context.Background(), "INSERT INTO entries (client_id, time, host) VALUES ($1, $2, $3)", clientID, time.Now(), host)
 		if err != nil {
 			panic(err)
 		}
