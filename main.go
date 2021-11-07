@@ -27,7 +27,7 @@ type Entry struct {
 }
 
 func GetHost(r *http.Request) (host string) {
-	host = r.Header.Get("X-Forwarded-Host")
+	host = r.Header.Get("CF-Connecting-IP")
 	if host == "" {
 		var err error
 		host, _, err = net.SplitHostPort(r.RemoteAddr)
